@@ -191,7 +191,7 @@ export default function Maze() {
 
             return (
               <div key={`${r}-${c}`} className={cls} title={isNPC && !npcOpen ? NPC_DATA[npcIdx].name : undefined}>
-                {isPlayer && (won ? '🎉' : '🐸')}
+                {isPlayer && (won ? '🎉' : '🐒')}
                 {!isPlayer && isEnd && '🏁'}
                 {!isPlayer && isNPC && !npcOpen && NPC_DATA[npcIdx].emoji}
                 {!isPlayer && isNPC && npcOpen && '✅'}
@@ -206,7 +206,7 @@ export default function Maze() {
         <button className="dpad-btn" onClick={() => tryMove(-1, 0)}>▲</button>
         <div className="dpad-row">
           <button className="dpad-btn" onClick={() => tryMove(0, -1)}>◀</button>
-          <div className="dpad-center">🐸</div>
+          <div className="dpad-center">🐒</div>
           <button className="dpad-btn" onClick={() => tryMove(0, 1)}>▶</button>
         </div>
         <button className="dpad-btn" onClick={() => tryMove(1, 0)}>▼</button>

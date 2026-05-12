@@ -6,7 +6,7 @@ export default function IntroModal() {
   return (
     <div className="overlay">
       <div className="modal intro-modal">
-        <div className="intro-emoji-row">🐸💣🧩🃏🔠🌀</div>
+        <div className="intro-emoji-row">🐒💣🧩🃏🔠🌀</div>
         <h1 className="intro-title">El Laberinto<br />del HBO</h1>
         <p className="intro-sub">⚠️ Misión de alto nivel intelectual ⚠️</p>
         <p className="intro-warning">

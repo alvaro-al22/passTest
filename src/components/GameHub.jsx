@@ -8,7 +8,7 @@ export default function GameHub() {
   return (
     <div className="hub-container">
       <header className="hub-header">
-        <h1 className="hub-title">🗺️ Cuartel General</h1>
+        <h1 className="hub-title">🗺️ Pantalla de Juegos</h1>
         <p className="hub-sub">Completa los minijuegos en orden para reunir las pistas</p>
       </header>
 
