@@ -85,6 +85,7 @@ export default function Minesweeper({ gameData }) {
   const { dispatch } = useGame()
   const [cells, setCells] = useState(null)
   const [status, setStatus] = useState('waiting') // waiting | playing | dead | won
+  const [flagMode, setFlagMode] = useState(false)
 
   const flagCount = cells ? cells.filter(c => c.flagged).length : 0
 
@@ -92,6 +93,18 @@ export default function Minesweeper({ gameData }) {
     if (status === 'dead' || status === 'won') return
 
     setCells(prev => {
+      // Flag mode: toggle flag instead of revealing
+      if (flagMode) {
+        if (!prev) return prev
+        const board = prev.map(c => ({ ...c }))
+        const cell = board[idx]
+        if (cell.revealed) return prev
+        const currentFlags = board.filter(c => c.flagged).length
+        if (!cell.flagged && currentFlags >= MINES) return prev
+        cell.flagged = !cell.flagged
+        return board
+      }
+
       let board
       if (!prev) {
         const r = Math.floor(idx / COLS); const c = idx % COLS
@@ -120,7 +133,7 @@ export default function Minesweeper({ gameData }) {
       }
       return board
     })
-  }, [status, dispatch, gameData])
+  }, [status, dispatch, gameData, flagMode])
 
   const handleRightClick = useCallback((e, idx) => {
     e.preventDefault()
@@ -156,6 +169,13 @@ export default function Minesweeper({ gameData }) {
 
       <div className="ms-stats">
         <span>💣 {MINES - flagCount} restantes</span>
+        <button
+          className={`btn ms-flag-toggle ${flagMode ? 'ms-flag-toggle--on' : ''}`}
+          onClick={() => setFlagMode(f => !f)}
+          title="Activar modo bandera (útil en móvil)"
+        >
+          🚩 {flagMode ? 'Modo bandera ON' : 'Modo bandera'}
+        </button>
         {status === 'dead' && <span className="ms-status dead">💥 HAS PASADO A MEJOR VIDA — las estadísticas dicen que esto era inevitable</span>}
         {status === 'won' && <span className="ms-status won">☠️ CAMPO DESPEJADO — pista: <strong>{gameData.hint}</strong></span>}
       </div>

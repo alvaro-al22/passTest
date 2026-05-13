@@ -260,7 +260,9 @@ html, body, #root {
 /* =============================================================
    MINESWEEPER
    ============================================================= */
-.ms-stats { display: flex; gap: 1.5rem; align-items: center; font-weight: 700; flex-wrap: wrap; justify-content: center; }
+.ms-stats { display: flex; gap: 1rem; align-items: center; font-weight: 700; flex-wrap: wrap; justify-content: center; }
+.ms-flag-toggle { padding: .35rem .8rem; font-size: .7rem; background: transparent; border: 2px solid var(--text-dim); color: var(--text-dim); border-radius: 6px; cursor: pointer; transition: all .2s; }
+.ms-flag-toggle--on { border-color: #ff6b35; color: #ff6b35; background: rgba(255,107,53,.12); }
 .ms-status.dead  { color: var(--neon-red); }
 .ms-status.won   { color: var(--neon-green); }
 

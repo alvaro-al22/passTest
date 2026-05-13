@@ -62,6 +62,26 @@ export default function WordSearch({ gameData }) {
     setSelectedCells(new Set([getCellKey(r, c)]))
   }
 
+  const onTouchStart = (r, c, e) => {
+    e.preventDefault()
+    onMouseDown(r, c)
+  }
+
+  const onTouchMove = (e) => {
+    e.preventDefault()
+    const touch = e.touches[0]
+    const el = document.elementFromPoint(touch.clientX, touch.clientY)
+    if (!el) return
+    const r = parseInt(el.dataset.row)
+    const c = parseInt(el.dataset.col)
+    if (!isNaN(r) && !isNaN(c)) onMouseEnter(r, c)
+  }
+
+  const onTouchEnd = (e) => {
+    e.preventDefault()
+    onMouseUp()
+  }
+
   const onMouseEnter = (r, c) => {
     if (!isDragging.current || !dragStart) return
     // Build selection from dragStart to current (horizontal or vertical only)
@@ -124,7 +144,12 @@ export default function WordSearch({ gameData }) {
       </p>
 
       <div className="ws-layout">
-        <div className="ws-grid" style={{ userSelect: 'none' }}>
+        <div
+          className="ws-grid"
+          style={{ userSelect: 'none', touchAction: 'none' }}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           {GRID_LETTERS.map((row, r) =>
             row.map((letter, c) => {
               const key = getCellKey(r, c)
@@ -133,9 +158,12 @@ export default function WordSearch({ gameData }) {
               return (
                 <div
                   key={key}
+                  data-row={r}
+                  data-col={c}
                   className={`ws-cell ${isSel ? 'ws-cell--selected' : ''} ${isFound ? 'ws-cell--found' : ''}`}
                   onMouseDown={() => onMouseDown(r, c)}
                   onMouseEnter={() => onMouseEnter(r, c)}
+                  onTouchStart={(e) => onTouchStart(r, c, e)}
                 >
                   {letter}
                 </div>
