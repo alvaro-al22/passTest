@@ -369,6 +369,8 @@ html, body, #root {
 .sp-tile--piece { background: var(--bg2); border: 2px solid var(--border); background-clip: padding-box; }
 .sp-tile--piece:hover { border-color: var(--neon-purple); transform: scale(1.04); }
 .sp-tile--blank { background: transparent; cursor: default; }
+.sp-tile--hint { border-color: #ffe246 !important; box-shadow: 0 0 12px 3px #ffe246, inset 0 0 6px #ffe24655; animation: hint-pulse 0.8s ease-in-out infinite alternate; }
+@keyframes hint-pulse { from { box-shadow: 0 0 8px 2px #ffe246; } to { box-shadow: 0 0 18px 6px #ffe246cc; } }
 
 /* =============================================================
    MEMORY CARDS

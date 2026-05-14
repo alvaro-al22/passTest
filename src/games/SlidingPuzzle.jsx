@@ -49,11 +49,63 @@ function isSolved(tiles) {
 
 const INITIAL = [0,1,2,3,4,5,6,7,8]
 
+// A* solver — returns the index of the tile to click next
+function manhattanDist(tiles) {
+  let d = 0
+  for (let i = 0; i < 9; i++) {
+    if (tiles[i] === 8) continue
+    d += Math.abs(Math.floor(tiles[i] / 3) - Math.floor(i / 3)) + Math.abs(tiles[i] % 3 - i % 3)
+  }
+  return d
+}
+
+function solveNext(tiles) {
+  if (isSolved(tiles)) return null
+  const key = s => s.join(',')
+  const open = [{ t: tiles, g: 0, h: manhattanDist(tiles), prev: null, clicked: -1 }]
+  const gMap = new Map([[key(tiles), 0]])
+  const closed = new Set()
+  while (open.length > 0) {
+    let minI = 0
+    for (let i = 1; i < open.length; i++)
+      if (open[i].g + open[i].h < open[minI].g + open[minI].h) minI = i
+    const [cur] = open.splice(minI, 1)
+    const curKey = key(cur.t)
+    if (closed.has(curKey)) continue
+    closed.add(curKey)
+    if (isSolved(cur.t)) {
+      let node = cur
+      while (node.prev && node.prev.prev) node = node.prev
+      return node.clicked
+    }
+    const blank = cur.t.indexOf(8)
+    const r = Math.floor(blank / 3), c = blank % 3
+    const dirs = []
+    if (r > 0) dirs.push(blank - 3)
+    if (r < 2) dirs.push(blank + 3)
+    if (c > 0) dirs.push(blank - 1)
+    if (c < 2) dirs.push(blank + 1)
+    for (const idx of dirs) {
+      const next = [...cur.t]
+      ;[next[idx], next[blank]] = [next[blank], next[idx]]
+      const nKey = key(next)
+      if (closed.has(nKey)) continue
+      const ng = cur.g + 1
+      if (!gMap.has(nKey) || gMap.get(nKey) > ng) {
+        gMap.set(nKey, ng)
+        open.push({ t: next, g: ng, h: manhattanDist(next), prev: cur, clicked: idx })
+      }
+    }
+  }
+  return null
+}
+
 export default function SlidingPuzzle({ gameData }) {
   const { dispatch } = useGame()
   const [tiles, setTiles] = useState(() => shuffle(INITIAL))
   const [moves, setMoves] = useState(0)
   const [won, setWon] = useState(false)
+  const [hintIdx, setHintIdx] = useState(null)
 
   const handleClick = useCallback((idx) => {
     if (won) return
@@ -66,6 +118,7 @@ export default function SlidingPuzzle({ gameData }) {
       const next = [...prev];
       [next[idx], next[blankIdx]] = [next[blankIdx], next[idx]]
       setMoves(m => m + 1)
+      setHintIdx(null)
       if (isSolved(next)) {
         setWon(true)
         setTimeout(() => dispatch({ type: 'COMPLETE_GAME', id: gameData.id, hint: gameData.hint }), 1200)
@@ -78,7 +131,10 @@ export default function SlidingPuzzle({ gameData }) {
     setTiles(shuffle(INITIAL))
     setMoves(0)
     setWon(false)
+    setHintIdx(null)
   }
+
+  const showHint = () => setHintIdx(solveNext(tiles))
 
   return (
     <div className="game-screen">
@@ -98,7 +154,7 @@ export default function SlidingPuzzle({ gameData }) {
         {tiles.map((tile, idx) => (
           <div
             key={idx}
-            className={`sp-tile ${tile === 8 ? 'sp-tile--blank' : 'sp-tile--piece'}`}
+            className={`sp-tile ${tile === 8 ? 'sp-tile--blank' : 'sp-tile--piece'} ${idx === hintIdx ? 'sp-tile--hint' : ''}`}
             onClick={() => handleClick(idx)}
             style={{ width: TILE_SIZE, height: TILE_SIZE, ...tileStyle(tile) }}
           />
@@ -114,6 +170,7 @@ export default function SlidingPuzzle({ gameData }) {
 
       <div className="game-actions">
         <button className="btn btn-secondary" onClick={reset}>🔄 Reiniciar</button>
+        {!won && <button className="btn btn-secondary" onClick={showHint}>💡 Pista</button>}
         {!won && <SolveButton gameData={gameData} />}
         {won && (
           <button className="btn btn-primary btn-big" onClick={() => dispatch({ type: 'COMPLETE_GAME', id: gameData.id, hint: gameData.hint })}>
