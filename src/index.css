@@ -371,6 +371,12 @@ html, body, #root {
 .sp-tile--blank { background: transparent; cursor: default; }
 .sp-tile--hint { border-color: #ffe246 !important; box-shadow: 0 0 12px 3px #ffe246, inset 0 0 6px #ffe24655; animation: hint-pulse 0.8s ease-in-out infinite alternate; }
 @keyframes hint-pulse { from { box-shadow: 0 0 8px 2px #ffe246; } to { box-shadow: 0 0 18px 6px #ffe246cc; } }
+.sp-tile--blank-drop { border: 2px dashed rgba(180,100,255,0.6) !important; }
+.sp-tile--blank-dragover { border: 2px solid #ffe246 !important; box-shadow: 0 0 16px 4px #ffe246; background: rgba(255,226,70,0.08) !important; }
+.sp-tile[draggable="true"] { cursor: grab; }
+.sp-tile[draggable="true"]:active { cursor: grabbing; }
+.sp-drag-tip { color: var(--neon-purple); }
+.sp-drag-used { color: #666; }
 
 /* =============================================================
    MEMORY CARDS

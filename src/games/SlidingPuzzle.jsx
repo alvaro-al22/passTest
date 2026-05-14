@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useGame } from '../context/GameContext'
 import SolveButton from '../components/SolveButton'
 
@@ -49,7 +49,7 @@ function isSolved(tiles) {
 
 const INITIAL = [0,1,2,3,4,5,6,7,8]
 
-// A* solver — returns the index of the tile to click next
+// A* — returns the grid position of the tile to click first
 function manhattanDist(tiles) {
   let d = 0
   for (let i = 0; i < 9; i++) {
@@ -62,22 +62,15 @@ function manhattanDist(tiles) {
 function solveNext(tiles) {
   if (isSolved(tiles)) return null
   const key = s => s.join(',')
-  const open = [{ t: tiles, g: 0, h: manhattanDist(tiles), prev: null, clicked: -1 }]
-  const gMap = new Map([[key(tiles), 0]])
-  const closed = new Set()
+  // Each node stores `first`: the grid index clicked at depth-1 (the one we want to return)
+  const open = [{ t: [...tiles], g: 0, f: manhattanDist(tiles), first: -1 }]
+  const visited = new Map([[key(tiles), 0]])
   while (open.length > 0) {
     let minI = 0
     for (let i = 1; i < open.length; i++)
-      if (open[i].g + open[i].h < open[minI].g + open[minI].h) minI = i
-    const [cur] = open.splice(minI, 1)
-    const curKey = key(cur.t)
-    if (closed.has(curKey)) continue
-    closed.add(curKey)
-    if (isSolved(cur.t)) {
-      let node = cur
-      while (node.prev && node.prev.prev) node = node.prev
-      return node.clicked
-    }
+      if (open[i].f < open[minI].f) minI = i
+    const cur = open.splice(minI, 1)[0]
+    if (isSolved(cur.t)) return cur.first
     const blank = cur.t.indexOf(8)
     const r = Math.floor(blank / 3), c = blank % 3
     const dirs = []
@@ -89,11 +82,10 @@ function solveNext(tiles) {
       const next = [...cur.t]
       ;[next[idx], next[blank]] = [next[blank], next[idx]]
       const nKey = key(next)
-      if (closed.has(nKey)) continue
       const ng = cur.g + 1
-      if (!gMap.has(nKey) || gMap.get(nKey) > ng) {
-        gMap.set(nKey, ng)
-        open.push({ t: next, g: ng, h: manhattanDist(next), prev: cur, clicked: idx })
+      if (!visited.has(nKey) || visited.get(nKey) > ng) {
+        visited.set(nKey, ng)
+        open.push({ t: next, g: ng, f: ng + manhattanDist(next), first: cur.first === -1 ? idx : cur.first })
       }
     }
   }
@@ -106,17 +98,24 @@ export default function SlidingPuzzle({ gameData }) {
   const [moves, setMoves] = useState(0)
   const [won, setWon] = useState(false)
   const [hintIdx, setHintIdx] = useState(null)
+  const [dragUsed, setDragUsed] = useState(false)
+  const [dragOverBlank, setDragOverBlank] = useState(false)
+  const dragFrom = useRef(null)
+
+  const applyMove = useCallback((from, to, prev) => {
+    const next = [...prev]
+    ;[next[from], next[to]] = [next[to], next[from]]
+    return next
+  }, [])
 
   const handleClick = useCallback((idx) => {
     if (won) return
     setTiles(prev => {
       const blankIdx = prev.indexOf(8)
-      const row = Math.floor(idx / 3); const col = idx % 3
-      const bRow = Math.floor(blankIdx / 3); const bCol = blankIdx % 3
-      const adjacent = (Math.abs(row - bRow) + Math.abs(col - bCol)) === 1
-      if (!adjacent) return prev
-      const next = [...prev];
-      [next[idx], next[blankIdx]] = [next[blankIdx], next[idx]]
+      const row = Math.floor(idx / 3), col = idx % 3
+      const bRow = Math.floor(blankIdx / 3), bCol = blankIdx % 3
+      if ((Math.abs(row - bRow) + Math.abs(col - bCol)) !== 1) return prev
+      const next = applyMove(idx, blankIdx, prev)
       setMoves(m => m + 1)
       setHintIdx(null)
       if (isSolved(next)) {
@@ -125,16 +124,51 @@ export default function SlidingPuzzle({ gameData }) {
       }
       return next
     })
-  }, [won, dispatch, gameData])
+  }, [won, dispatch, gameData, applyMove])
+
+  // ── Drag handlers (wildcard: any tile → blank, once per game) ──
+  const handleDragStart = (e, idx) => {
+    dragFrom.current = idx
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOverBlank = (e) => {
+    e.preventDefault()
+    setDragOverBlank(true)
+  }
+
+  const handleDrop = (e, blankIdx) => {
+    e.preventDefault()
+    setDragOverBlank(false)
+    if (won || dragFrom.current === null || dragFrom.current === blankIdx) return
+    const from = dragFrom.current
+    dragFrom.current = null
+    setTiles(prev => {
+      const next = applyMove(from, blankIdx, prev)
+      setMoves(m => m + 1)
+      setHintIdx(null)
+      if (isSolved(next)) {
+        setWon(true)
+        setTimeout(() => dispatch({ type: 'COMPLETE_GAME', id: gameData.id, hint: gameData.hint }), 1200)
+      }
+      return next
+    })
+    setDragUsed(true)
+  }
 
   const reset = () => {
     setTiles(shuffle(INITIAL))
     setMoves(0)
     setWon(false)
     setHintIdx(null)
+    setDragUsed(false)
+    setDragOverBlank(false)
+    dragFrom.current = null
   }
 
   const showHint = () => setHintIdx(solveNext(tiles))
+
+  const blankIdx = tiles.indexOf(8)
 
   return (
     <div className="game-screen">
@@ -142,7 +176,11 @@ export default function SlidingPuzzle({ gameData }) {
       <h2 className="game-title">{gameData.emoji} {gameData.name}</h2>
       <p className="game-desc">
         Ordena la foto en el orden correcto 🐶<br/>
-        <small>Haz clic en una pieza adyacente al hueco para moverla • Movimientos: {moves}</small>
+        <small>
+          Haz clic en una pieza adyacente al hueco para moverla • Movimientos: {moves}
+          {!dragUsed && !won && <> · <span className="sp-drag-tip">🪄 Arrastra cualquier ficha al hueco (1 vez)</span></>}
+          {dragUsed && <> · <span className="sp-drag-used">🪄 Poder usado</span></>}
+        </small>
       </p>
 
       <div className="sp-preview">
@@ -154,8 +192,19 @@ export default function SlidingPuzzle({ gameData }) {
         {tiles.map((tile, idx) => (
           <div
             key={idx}
-            className={`sp-tile ${tile === 8 ? 'sp-tile--blank' : 'sp-tile--piece'} ${idx === hintIdx ? 'sp-tile--hint' : ''}`}
+            className={[
+              'sp-tile',
+              tile === 8 ? 'sp-tile--blank' : 'sp-tile--piece',
+              idx === hintIdx ? 'sp-tile--hint' : '',
+              tile === 8 && !dragUsed && !won ? 'sp-tile--blank-drop' : '',
+              tile === 8 && dragOverBlank && !dragUsed ? 'sp-tile--blank-dragover' : '',
+            ].filter(Boolean).join(' ')}
             onClick={() => handleClick(idx)}
+            draggable={tile !== 8 && !dragUsed && !won}
+            onDragStart={tile !== 8 ? e => handleDragStart(e, idx) : undefined}
+            onDragOver={tile === 8 && !dragUsed ? handleDragOverBlank : undefined}
+            onDragLeave={tile === 8 ? () => setDragOverBlank(false) : undefined}
+            onDrop={tile === 8 && !dragUsed ? e => handleDrop(e, idx) : undefined}
             style={{ width: TILE_SIZE, height: TILE_SIZE, ...tileStyle(tile) }}
           />
         ))}
